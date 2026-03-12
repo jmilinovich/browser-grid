@@ -23,6 +23,9 @@ export type { ScreenInfo } from "./screen";
 export { injectOverlay, updateOverlay, removeOverlay } from "./overlay";
 export type { OverlayOptions } from "./overlay";
 
+// Chrome flags
+export { MINIMAL_CHROME_FLAGS } from "./chrome-flags";
+
 // Playwright Test fixture
 export { gridTest, gridConfig } from "./fixture";
 export type { GridFixtureOptions } from "./fixture";

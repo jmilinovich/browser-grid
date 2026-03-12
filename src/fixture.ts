@@ -3,6 +3,7 @@ import { getSlot, createGrid, type GridConfig } from "./grid";
 import { setWindowBounds } from "./cdp";
 import { injectOverlay, type OverlayOptions } from "./overlay";
 import { detectScreen } from "./screen";
+import { MINIMAL_CHROME_FLAGS } from "./chrome-flags";
 
 /**
  * Configuration options for the browser-grid fixture.
@@ -70,6 +71,10 @@ export function gridConfig(
 ): Record<string, unknown> {
   return {
     _browserGrid: options,
+    // Launch with minimal Chrome UI (no bookmarks, extensions, etc.)
+    launchOptions: {
+      args: MINIMAL_CHROME_FLAGS,
+    },
   };
 }
 

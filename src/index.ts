@@ -30,6 +30,10 @@ export { MINIMAL_CHROME_FLAGS, APP_MODE_FLAGS } from "./chrome-flags";
 export { launchGrid } from "./launch";
 export type { LaunchGridOptions, GridSlot, GridInstance } from "./launch";
 
+// Parallel test runner
+export { runParallelTests } from "./runner";
+export type { TestDefinition, RunnerOptions, RunnerResult } from "./runner";
+
 // Playwright Test fixture
 export { gridTest, gridConfig } from "./fixture";
 export type { GridFixtureOptions } from "./fixture";

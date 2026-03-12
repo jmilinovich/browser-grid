@@ -78,7 +78,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 - PRs must include:
   - Summary of what and why (not a diff recap)
   - Test plan (what was verified)
-  - Downstream impact (does canva-ai-routing need updating?)
+  - Downstream impact (does canva-ai-evals need updating?)
 - Push to remote after committing. Don't leave commits local-only.
 
 ### 4. Testing requirements
@@ -101,13 +101,13 @@ After any change, check whether these need updating:
 | Bug fix or feature | CHANGELOG.md (under next version heading) |
 | Architecture change (new file, moved file) | CLAUDE.md architecture section |
 | Satisfied a GOAL.md criterion | Note it as done in GOAL.md |
-| Changed exports/config/fixture | Update `~/src/canva-ai-routing` per the downstream sync table in GOAL.md |
+| Changed exports/config/fixture | Update `~/src/canva-ai-evals` per the downstream sync table in GOAL.md |
 
-### 6. Downstream sync (canva-ai-routing)
+### 6. Downstream sync (canva-ai-evals)
 
-`~/src/canva-ai-routing` is the primary consumer. After any API or behavior change:
+`~/src/canva-ai-evals` is the primary consumer (test infrastructure). After any API or behavior change:
 1. Check the sync table in GOAL.md
-2. Update the affected files in canva-ai-routing
+2. Update the affected files in canva-ai-evals
 3. Verify the config still works: the import must resolve and the types must match
 
 ### 7. npm publishing
@@ -125,6 +125,6 @@ Before ending any session, run through this checklist (or use `/wrap-up`):
 - [ ] Tests pass (`npm test`)
 - [ ] Build succeeds (`npm run build`)
 - [ ] CHANGELOG.md updated if there are user-facing changes
-- [ ] Downstream canva-ai-routing updated if API/behavior changed
+- [ ] Downstream canva-ai-evals updated if API/behavior changed
 - [ ] CLAUDE.md architecture section still accurate
 - [ ] If a new npm version is warranted, tell the user

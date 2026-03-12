@@ -4,7 +4,7 @@ import { getSlot } from "../src/grid";
 
 /**
  * Critical test: verify that CDP window positioning does NOT
- * override the page viewport. Downstream consumers (e.g., canva-ai-routing)
+ * override the page viewport. Downstream consumers (e.g., canva-ai-evals)
  * set specific viewports (389×798 mobile) and the grid must not touch them.
  */
 test.describe("viewport preservation", () => {
@@ -32,7 +32,7 @@ test.describe("viewport preservation", () => {
   test("viewport set in context should survive CDP positioning", async () => {
     const browser = await chromium.launch({ headless: true });
 
-    // Simulate what canva-ai-routing does: specific viewport + grid positioning
+    // Simulate what canva-ai-evals does: specific viewport + grid positioning
     const context = await browser.newContext({
       viewport: { width: 389, height: 798 },
       isMobile: true,

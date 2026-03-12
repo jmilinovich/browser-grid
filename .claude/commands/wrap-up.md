@@ -55,12 +55,12 @@ Check these are still accurate after this session's changes:
 - **README.md** — do the API docs, config examples, and CLI docs match current code?
 - **GOAL.md** — if a criterion was satisfied, mark it. If the architecture tree is stale, update it.
 
-## 6. Downstream sync (canva-ai-routing)
+## 6. Downstream sync (canva-ai-evals)
 
 If this session changed any exports, config shape, fixture behavior, or CLI:
 
 1. Check the sync table in GOAL.md
-2. Update affected files in `~/src/canva-ai-routing`:
+2. Update affected files in `~/src/canva-ai-evals`:
    - `playwright.config.ts` — imports and config
    - `tests/routes.spec.ts` — fixture usage
    - `.claude/commands/test-routing.md` — browser-grid integration docs

@@ -78,6 +78,7 @@ browser-grid/
 │   ├── chrome-flags.test.ts # Flag composition
 │   ├── fixture.test.ts   # gridConfig, gridLaunchArgs
 │   ├── launch.test.ts    # launchGrid lifecycle
+│   ├── runner.test.ts    # runParallelTests pass/fail/callbacks
 │   └── viewport-preserve.test.ts # Viewport not overridden by CDP
 ├── demo.ts               # Visual demo script
 ├── GOAL.md               # This file — autonomous goal function

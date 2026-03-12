@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 ### Added
 - **Multi-monitor display targeting** — `display` option in `gridConfig()` and `launchGrid()` to tile on a specific monitor: `"main"`, `"internal"`/`"laptop"`, `"secondary"`/`"external"`, index, or name substring (e.g., `"HP Z27"`)

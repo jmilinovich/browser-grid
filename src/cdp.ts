@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { warn } from "./debug";
 
 export interface WindowBounds {
   left: number;
@@ -32,17 +33,7 @@ export async function setWindowBounds(
     await session.detach();
     return true;
   } catch (error) {
-    // CDP not available (e.g., Firefox, WebKit) — fail silently
-    // The launch args fallback should still position the window approximately
-    if (
-      process.env.BROWSER_GRID_DEBUG ||
-      process.env.DEBUG?.includes("browser-grid")
-    ) {
-      console.warn(
-        `[browser-grid] CDP setWindowBounds failed (expected for non-Chromium):`,
-        (error as Error).message
-      );
-    }
+    warn("CDP setWindowBounds failed (expected for non-Chromium):", (error as Error).message);
     return false;
   }
 }
@@ -68,15 +59,7 @@ export async function getWindowBounds(
       height: height ?? 0,
     };
   } catch (error) {
-    if (
-      process.env.BROWSER_GRID_DEBUG ||
-      process.env.DEBUG?.includes("browser-grid")
-    ) {
-      console.warn(
-        `[browser-grid] CDP getWindowBounds failed:`,
-        (error as Error).message
-      );
-    }
+    warn("CDP getWindowBounds failed:", (error as Error).message);
     return null;
   }
 }

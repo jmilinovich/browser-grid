@@ -71,6 +71,10 @@ function sleep(ms: number): Promise<void> {
  * ```
  */
 export async function launchGrid(options: LaunchGridOptions): Promise<GridInstance> {
+  if (!options.count || options.count < 1) {
+    throw new Error(`launchGrid requires count >= 1, got ${options.count}`);
+  }
+
   const {
     count,
     gap = 4,

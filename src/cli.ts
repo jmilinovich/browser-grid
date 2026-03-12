@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { getSlot, createGrid, getAllSlots } from "./grid";
-import { detectScreen, listDisplays, listScreens } from "./screen";
+import { detectScreen, listDisplays, listScreens, resolveDisplay } from "./screen";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -86,16 +86,45 @@ if (command === "slots") {
   const preset = parseFlag("--preset") || "auto";
   const reserveSide = parseFlag("--reserve");
   const reserveSize = reserveSide ? parseInt(args[args.indexOf("--reserve") + 2] || "0", 10) : 0;
+  const displaySelector = parseFlag("--display");
   const json = hasFlag("--json");
 
-  const screen = detectScreen();
+  // Resolve display or fall back to main screen
+  let screenX = 0, screenY = 0, screenW: number, screenH: number, topOffset: number;
+  let displayName = "";
+
+  if (displaySelector) {
+    const display = resolveDisplay(displaySelector);
+    if (display) {
+      screenX = display.x;
+      screenY = display.y;
+      screenW = display.width;
+      screenH = display.height;
+      topOffset = display.visible.y - display.y;
+      displayName = display.name;
+    } else {
+      console.error(`Display "${displaySelector}" not found, using main`);
+      const screen = detectScreen();
+      screenW = screen.width;
+      screenH = screen.height;
+      topOffset = screen.topOffset;
+    }
+  } else {
+    const screen = detectScreen();
+    screenW = screen.width;
+    screenH = screen.height;
+    topOffset = screen.topOffset;
+  }
+
   const config = createGrid({
     preset: preset as any,
     workerCount: count,
     gap,
-    screenWidth: screen.width,
-    screenHeight: screen.height,
-    topOffset: screen.topOffset,
+    screenWidth: screenW,
+    screenHeight: screenH,
+    screenX,
+    screenY,
+    topOffset,
     ...(reserveSide && reserveSize > 0 && {
       reserve: { side: reserveSide as any, size: reserveSize },
     }),
@@ -106,7 +135,8 @@ if (command === "slots") {
   if (json) {
     console.log(JSON.stringify(slots, null, 2));
   } else {
-    console.log(`Screen: ${screen.width}×${screen.height} | Grid: ${config.cols}×${config.rows} | Workers: ${count}\n`);
+    const displayInfo = displayName ? ` (${displayName})` : "";
+    console.log(`Screen: ${screenW}×${screenH}${displayInfo} | Grid: ${config.cols}×${config.rows} | Workers: ${count}\n`);
     for (const slot of slots) {
       console.log(
         `  Slot ${slot.slot}: pos(${slot.position.x},${slot.position.y}) size(${slot.viewport.width}×${slot.viewport.height})`

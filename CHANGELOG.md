@@ -8,8 +8,13 @@
 - `resolveDisplay()` — resolve a display selector to full display bounds
 - `DisplayBounds` and `DisplaySelector` types
 - CLI `browser-grid displays` command — show all monitors with positions and usable areas
+- Demo scripts accept `--display` flag for multi-monitor targeting
 - `/wrap-up` skill — end-of-session checklist for commits, docs, downstream sync
 - Workflow rules in CLAUDE.md for deterministic autonomous sessions
+
+### Fixed
+- **Menu bar offset detection** — `detectScreen()` now uses NSScreen for accurate menu bar height (was hardcoded 25px, modern MacBooks with notch are 33px)
+- **App-mode windows actually work** — `launchGrid()` now uses `launchPersistentContext` so the `--app` flag applies to the page you control (previously `chromium.launch` + `newContext` created a separate non-app window)
 
 ### Changed
 - `GridConfig` gains `screenX`/`screenY` for display origin offset

@@ -16,7 +16,20 @@ Requires `@playwright/test >= 1.40` as a peer dependency.
 
 ## Quick Start
 
-Three lines to get auto-tiling in your Playwright tests:
+Two files to get auto-tiling Playwright tests:
+
+```ts
+// playwright.config.ts
+import { defineConfig } from '@playwright/test';
+import { gridConfig, gridLaunchArgs } from 'browser-grid';
+
+export default defineConfig({
+  use: {
+    ...gridConfig({ gap: 4 }),
+    launchOptions: { args: gridLaunchArgs() },  // chromeless app-mode windows
+  },
+});
+```
 
 ```ts
 // tests/example.spec.ts
@@ -29,34 +42,33 @@ test('loads homepage', async ({ gridPage }) => {
 });
 ```
 
-Run with headed mode:
-
 ```bash
 npx playwright test --workers=4 --headed
 ```
 
-Each worker's browser snaps to a grid slot — chromeless app-mode windows with no tab bar or URL bar. No overlap, no config needed.
+Each worker's browser snaps to a grid slot. Overlays show the test name, and status turns green/red on pass/fail.
 
 ## Configuration
 
-Add `gridConfig()` to your `playwright.config.ts` for custom layouts:
+`gridConfig()` supports these options:
 
 ```ts
-import { defineConfig } from '@playwright/test';
-import { gridConfig } from 'browser-grid';
+gridConfig({
+  preset: 'auto',                          // or 'duo', 'quad', 'six', 'eight', 'nine'
+  gap: 4,                                   // pixels between windows
+  reserve: { side: 'right', size: 700 },   // keep terminal visible
+  overlay: true,                            // show slot labels (default: true)
+  overlayDuration: 3000,                    // auto-hide after 3s (0 = always show)
+  display: 'external',                      // multi-monitor: target a specific display
+})
+```
 
-export default defineConfig({
-  use: {
-    ...gridConfig({
-      preset: 'auto',                          // or 'duo', 'quad', 'six', 'eight', 'nine'
-      gap: 4,                                   // pixels between windows
-      reserve: { side: 'right', size: 700 },   // keep terminal visible
-      overlay: true,                            // show slot labels (default: true)
-      overlayDuration: 3000,                    // auto-hide after 3s (0 = always show)
-      appMode: true,                            // chromeless windows (default: true)
-    }),
-  },
-});
+`gridLaunchArgs()` returns chrome flags separately so you can compose with your own:
+
+```ts
+launchOptions: {
+  args: [...gridLaunchArgs(), '--disable-gpu'],
+}
 ```
 
 ## CLI

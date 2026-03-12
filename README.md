@@ -35,7 +35,7 @@ Run with headed mode:
 npx playwright test --workers=4 --headed
 ```
 
-Each worker's browser snaps to a grid slot. No overlap, no config needed.
+Each worker's browser snaps to a grid slot — chromeless app-mode windows with no tab bar or URL bar. No overlap, no config needed.
 
 ## Configuration
 
@@ -53,9 +53,23 @@ export default defineConfig({
       reserve: { side: 'right', size: 700 },   // keep terminal visible
       overlay: true,                            // show slot labels (default: true)
       overlayDuration: 3000,                    // auto-hide after 3s (0 = always show)
+      appMode: true,                            // chromeless windows (default: true)
     }),
   },
 });
+```
+
+## CLI
+
+```bash
+# Show detected screen info
+browser-grid info
+
+# Print slot positions for 8 workers
+browser-grid slots 8
+
+# With gap and reserve zone, output as JSON
+browser-grid slots 8 --gap 4 --reserve right 700 --json
 ```
 
 ## Presets
@@ -88,7 +102,7 @@ test('my test', async ({ gridPage }) => {
 
 #### `gridConfig(options?)`
 
-Returns configuration to spread into `use` in `playwright.config.ts`.
+Returns configuration to spread into `use` in `playwright.config.ts`. Automatically sets up app-mode chrome flags.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -98,7 +112,8 @@ Returns configuration to spread into `use` in `playwright.config.ts`.
 | `reserve` | `{ side, size }` | none | Reserve screen region |
 | `overlay` | `boolean` | `true` | Show slot label overlay |
 | `overlayDuration` | `number` | `0` | Auto-hide overlay after ms (0 = always show) |
-| `overlayPosition` | `string` | `'top-left'` | Overlay corner position |
+| `overlayPosition` | `string` | `'top-left'` | Overlay corner: `top-left`, `top-right`, `bottom-left`, `bottom-right` |
+| `appMode` | `boolean` | `true` | Use chromeless app-mode windows (no tab/URL bar) |
 | `screenWidth` | `number` | auto-detect | Override screen width |
 | `screenHeight` | `number` | auto-detect | Override screen height |
 | `topOffset` | `number` | auto-detect | Menu bar offset in pixels |
@@ -131,6 +146,16 @@ Create a grid config from presets and options. Resolves `'auto'` preset based on
 
 Pick the smallest preset that fits the given worker count.
 
+### Chrome Flags
+
+#### `APP_MODE_FLAGS`
+
+Chrome launch args for fully chromeless windows. No tab bar, no URL bar — just the page content with a thin title bar.
+
+#### `MINIMAL_CHROME_FLAGS`
+
+Chrome launch args that keep the normal browser UI but strip bookmarks, extensions, sync prompts, etc.
+
 ### CDP Positioning
 
 #### `setWindowBounds(page, bounds): Promise<boolean>`
@@ -153,26 +178,31 @@ Detect macOS screen resolution and menu bar offset. Falls back to 1728x1117 (Mac
 
 Inject a slot label into the page. Semi-transparent, `pointer-events: none`, won't interfere with tests.
 
+#### `updateOverlay(page, options)`
+
+Update the overlay text (e.g., when a new test starts in the same worker slot).
+
 #### `removeOverlay(page)`
 
 Remove the overlay from a page.
 
 ## Standalone Usage (without fixture)
 
-You can use the grid math and CDP functions directly:
+You can use the grid math, chrome flags, and CDP functions directly:
 
 ```ts
 import { chromium } from 'playwright';
-import { getSlot, setWindowBounds } from 'browser-grid';
+import { getSlot, setWindowBounds, APP_MODE_FLAGS } from 'browser-grid';
 
 const config = { cols: 2, rows: 2, gap: 4 };
 const slot = getSlot(0, config);
 
 const browser = await chromium.launch({
   headless: false,
-  args: slot.launchArgs,
+  args: [...slot.launchArgs, ...APP_MODE_FLAGS],
 });
-const page = await browser.newPage({ viewport: slot.viewport });
+const context = await browser.newContext({ viewport: slot.viewport });
+const page = await context.newPage();
 
 // Precise positioning via CDP
 await setWindowBounds(page, slot.bounds);
@@ -182,12 +212,13 @@ await setWindowBounds(page, slot.bounds);
 
 1. **Grid math** divides available screen space into cells based on cols/rows, accounting for gaps, menu bar offset, and reserved zones.
 2. **Screen detection** reads macOS `system_profiler` for logical resolution and dock position. Falls back to sensible defaults.
-3. **CDP positioning** uses `Browser.setWindowBounds` for pixel-precise window placement after launch. Launch args (`--window-position`, `--window-size`) provide initial positioning.
-4. **Slot overlay** injects a small label via `page.evaluate()` + `page.addInitScript()` so it persists across navigations.
+3. **App-mode windows** use Chrome's `--app` flag to remove the tab bar and URL bar, maximizing the viewport area.
+4. **CDP positioning** uses `Browser.setWindowBounds` for pixel-precise window placement after launch. Launch args (`--window-position`, `--window-size`) provide initial positioning.
+5. **Slot overlay** injects a small label via `page.evaluate()` + `page.addInitScript()` so it persists across navigations.
 
 ## Notes
 
-- **Chromium only** for CDP-based precise positioning. Firefox and WebKit fall back to launch args (approximate positioning).
+- **Chromium only** for CDP-based precise positioning and app-mode. Firefox and WebKit fall back to launch args (approximate positioning).
 - **macOS optimized** for screen detection. Other platforms use default 1728x1117 resolution (override with `screenWidth`/`screenHeight`).
 - **Headful only** — this package is designed for watching tests run. In headless mode, positioning is a no-op.
 

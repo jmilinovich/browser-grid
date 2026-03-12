@@ -1,7 +1,8 @@
 import { test, expect, chromium } from "@playwright/test";
 import { getSlot, getAllSlots, type GridConfig } from "../src/grid";
 import { setWindowBounds, getWindowBounds } from "../src/cdp";
-import { injectOverlay, removeOverlay } from "../src/overlay";
+import { injectOverlay, removeOverlay, updateOverlay } from "../src/overlay";
+import { APP_MODE_FLAGS, MINIMAL_CHROME_FLAGS } from "../src/chrome-flags";
 
 const GRID: GridConfig = {
   cols: 2,
@@ -107,6 +108,65 @@ test.describe("Overlay injection", () => {
       // Wait for auto-hide
       await page.waitForTimeout(1000);
       await expect(overlay).not.toBeVisible();
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test("should update overlay text", async () => {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto("about:blank");
+
+    try {
+      await injectOverlay(page, { slot: 0, testName: "first test" });
+      const overlay = page.locator("#__browser_grid_overlay");
+      await expect(overlay).toHaveText("#0 first test");
+
+      // Update overlay
+      await updateOverlay(page, { slot: 0, testName: "second test" });
+      await expect(overlay).toHaveText("#0 second test");
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test("overlay should support all 4 positions", async () => {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto("about:blank");
+
+    try {
+      for (const position of ["top-left", "top-right", "bottom-left", "bottom-right"] as const) {
+        await injectOverlay(page, { slot: 0, testName: position, position });
+        const overlay = page.locator("#__browser_grid_overlay");
+        await expect(overlay).toBeVisible();
+        const style = await overlay.evaluate((el) => el.style.cssText);
+        if (position.includes("right")) {
+          expect(style).toContain("right:");
+        }
+        if (position.includes("bottom")) {
+          expect(style).toContain("bottom:");
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test.describe("App mode launch", () => {
+  test("should launch with app-mode flags without error", async () => {
+    const slot = getSlot(0, GRID);
+    const browser = await chromium.launch({
+      headless: true,
+      args: [...slot.launchArgs, ...APP_MODE_FLAGS],
+    });
+    try {
+      const context = await browser.newContext({ viewport: slot.viewport });
+      const page = await context.newPage();
+      await page.setContent("<h1>App mode works</h1>");
+      await expect(page.locator("h1")).toHaveText("App mode works");
     } finally {
       await browser.close();
     }

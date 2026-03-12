@@ -33,7 +33,7 @@ src/
 
 ## Working on this project
 
-See PLAN.md for the goal function. Pick the lowest unmet criterion and iterate.
+See GOAL.md for the goal function. Pick the lowest unmet criterion and iterate.
 
 When making changes:
 - Run `npm run build` to check TypeScript compiles

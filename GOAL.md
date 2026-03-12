@@ -26,6 +26,10 @@ No tool like this exists. Zalenium (archived) validated the concept for Selenium
 | 12 | **Downstream skill freshness**: When the API, exports, fixture behavior, or config shape changes, update the downstream consumer at `~/src/canva-ai-routing`. The files to sync are: `playwright.config.ts`, `tests/routes.spec.ts`, and `.claude/commands/route-test.md`. See the table below for what triggers what. | After any API change, check that `cd ~/src/canva-ai-routing && npx playwright test --headed --workers=4` still runs with browser-grid tiling 4 portrait windows. |
 | 13 | **Viewport must not be overridden**: The `gridPage` fixture must position/size the window but NEVER override the viewport set in `playwright.config.ts`. Downstream consumers set specific viewports (e.g., 389×798 mobile). The fixture controls the *window*, not the *viewport*. | Set `viewport: { width: 389, height: 798 }` in config, use `gridPage` — verify `page.viewportSize()` is still 389×798. |
 | 14 | **launchGrid() for script-based testing**: `launchGrid()` and `runParallelTests()` handle the full lifecycle (launch, position, overlay, status, cleanup) for non-fixture usage (agent scripts, custom runners). | `launchGrid({ count: 4 })` opens 4 tiled browsers, `grid.closeAll()` cleans up. No leaked processes. |
+| 15 | **README sells the tool in 30 seconds**: README leads with the problem (overlapping headful windows), shows a GIF/screenshot of the grid in action, and gets to `npm install browser-grid` + a 3-line usage snippet within the first scroll. No wall of config. | A developer who has never heard of browser-grid reads the README and understands what it does, why they want it, and how to start — in under 30 seconds. |
+| 16 | **Copy-paste quickstart**: README includes a self-contained example that works with zero config — just `npm install`, paste, run. No setup steps, no config files, no env vars. | Clone a fresh project, paste the quickstart, run it — browsers tile on first try. |
+| 17 | **Discoverable on npm/GitHub**: Package has accurate keywords, description, and repo metadata. GitHub repo has topics, a concise description, and homepage linking to npm. npm page shows a meaningful README. | Search "playwright grid" or "playwright tile windows" on npm/GitHub — browser-grid appears in the first page of results. |
+| 18 | **Demo GIF/screenshot in README**: A visual artifact (GIF or screenshot) showing 4+ tiled browsers running tests is embedded in the README and visible on both GitHub and npm. | Open the GitHub repo or npm page — the visual is immediately visible above the fold. |
 
 ### Downstream Consumer: canva-ai-routing
 
@@ -57,17 +61,27 @@ A Claude session working on this should:
 ```
 browser-grid/
 ├── src/
-│   ├── index.ts          # Public API exports
-│   ├── grid.ts           # Grid math (getSlot, getAllSlots, presets)
+│   ├── index.ts          # Public API re-exports
+│   ├── grid.ts           # Grid math (getSlot, getAllSlots, presets, autoPreset)
 │   ├── cdp.ts            # CDP window positioning (setWindowBounds, getWindowBounds)
 │   ├── screen.ts         # macOS screen detection (resolution, dock, menu bar)
-│   ├── overlay.ts        # Inject slot label overlay into pages
-│   └── fixture.ts        # Playwright Test fixture (gridTest)
+│   ├── overlay.ts        # Status-colored slot label overlays
+│   ├── chrome-flags.ts   # Minimal & app-mode Chrome flag sets
+│   ├── fixture.ts        # Playwright Test fixture (gridTest, gridConfig, gridLaunchArgs)
+│   ├── launch.ts         # High-level launchGrid() API
+│   ├── runner.ts         # runParallelTests() for script-based usage
+│   └── cli.ts            # CLI: browser-grid info, browser-grid slots
 ├── test/
 │   ├── grid.test.ts      # Unit tests for grid math
-│   └── integration.test.ts # Launch browsers, verify positions
+│   ├── integration.test.ts # CDP positioning, overlays, app-mode
+│   ├── cli.test.ts       # CLI commands
+│   ├── chrome-flags.test.ts # Flag composition
+│   ├── fixture.test.ts   # gridConfig, gridLaunchArgs
+│   ├── launch.test.ts    # launchGrid lifecycle
+│   └── viewport-preserve.test.ts # Viewport not overridden by CDP
 ├── demo.ts               # Visual demo script
-├── PLAN.md               # This file
+├── GOAL.md               # This file — autonomous goal function
+├── CLAUDE.md             # Project context for Claude sessions
 ├── README.md             # Usage docs
 ├── package.json
 └── tsconfig.json

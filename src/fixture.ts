@@ -1,7 +1,7 @@
 import { test as base, type Page } from "@playwright/test";
 import { getSlot, createGrid, type GridConfig } from "./grid";
 import { setWindowBounds } from "./cdp";
-import { injectOverlay, type OverlayOptions } from "./overlay";
+import { injectOverlay, updateOverlay, type OverlayOptions, type OverlayStatus } from "./overlay";
 import { detectScreen } from "./screen";
 import { MINIMAL_CHROME_FLAGS, APP_MODE_FLAGS } from "./chrome-flags";
 
@@ -126,15 +126,35 @@ export const gridTest = base.extend<{ gridPage: Page }>({
     await setWindowBounds(page, slot.bounds);
 
     // Inject overlay if enabled (default: true)
-    if (options.overlay !== false) {
+    const showOverlay = options.overlay !== false;
+    if (showOverlay) {
       await injectOverlay(page, {
         slot: slotIndex,
         testName: testInfo.title,
         duration: options.overlayDuration ?? 0,
         position: options.overlayPosition ?? "top-left",
+        status: "running",
       });
     }
 
     await use(page);
+
+    // Update overlay with test result status
+    if (showOverlay) {
+      const status: OverlayStatus =
+        testInfo.status === "passed" ? "passed" :
+        testInfo.status === "failed" || testInfo.status === "timedOut" ? "failed" :
+        "idle";
+      try {
+        await updateOverlay(page, {
+          slot: slotIndex,
+          testName: testInfo.title,
+          position: options.overlayPosition ?? "top-left",
+          status,
+        });
+      } catch {
+        // Page may be closed already
+      }
+    }
   },
 });

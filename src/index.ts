@@ -21,7 +21,7 @@ export type { ScreenInfo } from "./screen";
 
 // Overlay
 export { injectOverlay, updateOverlay, removeOverlay } from "./overlay";
-export type { OverlayOptions } from "./overlay";
+export type { OverlayOptions, OverlayStatus } from "./overlay";
 
 // Chrome flags
 export { MINIMAL_CHROME_FLAGS, APP_MODE_FLAGS } from "./chrome-flags";

@@ -74,7 +74,7 @@ test.describe("Overlay injection", () => {
       // Verify overlay exists
       const overlay = await page.locator("#__browser_grid_overlay");
       await expect(overlay).toBeVisible();
-      await expect(overlay).toHaveText("#0 test-overlay");
+      await expect(overlay).toContainText("#0 test-overlay");
 
       // Verify pointer-events: none
       const pointerEvents = await overlay.evaluate(
@@ -121,11 +121,11 @@ test.describe("Overlay injection", () => {
     try {
       await injectOverlay(page, { slot: 0, testName: "first test" });
       const overlay = page.locator("#__browser_grid_overlay");
-      await expect(overlay).toHaveText("#0 first test");
+      await expect(overlay).toContainText("#0 first test");
 
       // Update overlay
       await updateOverlay(page, { slot: 0, testName: "second test" });
-      await expect(overlay).toHaveText("#0 second test");
+      await expect(overlay).toContainText("#0 second test");
     } finally {
       await browser.close();
     }
@@ -149,6 +149,32 @@ test.describe("Overlay injection", () => {
           expect(style).toContain("bottom:");
         }
       }
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test("overlay should change color based on status", async () => {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto("about:blank");
+
+    try {
+      // Running = blue
+      await injectOverlay(page, { slot: 0, testName: "test", status: "running" });
+      let overlay = page.locator("#__browser_grid_overlay");
+      let bg = await overlay.evaluate((el) => el.style.background);
+      expect(bg).toContain("59, 130, 246"); // blue
+
+      // Passed = green
+      await updateOverlay(page, { slot: 0, testName: "test", status: "passed" });
+      bg = await overlay.evaluate((el) => el.style.background);
+      expect(bg).toContain("34, 197, 94"); // green
+
+      // Failed = red
+      await updateOverlay(page, { slot: 0, testName: "test", status: "failed" });
+      bg = await overlay.evaluate((el) => el.style.background);
+      expect(bg).toContain("239, 68, 68"); // red
     } finally {
       await browser.close();
     }

@@ -4,7 +4,7 @@ Tile Playwright browser windows in a grid so you can watch parallel tests run.
 
 > No tool like this exists. Run `npx tsx demo.ts` to see it in action.
 
-<!-- After capturing: ![browser-grid demo](assets/demo.png) -->
+![browser-grid demo — 4 Playwright browsers tiled in a 2×2 grid](assets/demo.png)
 
 ## Install
 

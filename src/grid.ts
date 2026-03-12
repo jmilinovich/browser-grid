@@ -7,6 +7,10 @@ export interface GridConfig {
   screenWidth?: number;
   /** Total screen height in logical pixels (default: auto-detect macOS) */
   screenHeight?: number;
+  /** X origin of the target display in virtual screen space (default: 0) */
+  screenX?: number;
+  /** Y origin of the target display in virtual screen space (default: 0) */
+  screenY?: number;
   /** Gap between windows in pixels (default: 0) */
   gap?: number;
   /** Top offset for menu bar (default: 25) */
@@ -44,12 +48,14 @@ export const DEFAULT_TOP_OFFSET = 25; // macOS menu bar
 export function getSlot(slot: number, config: GridConfig): SlotResult {
   const screenW = config.screenWidth ?? DEFAULT_SCREEN.width;
   const screenH = config.screenHeight ?? DEFAULT_SCREEN.height;
+  const originX = config.screenX ?? 0;
+  const originY = config.screenY ?? 0;
   const gap = config.gap ?? 0;
   const topOffset = config.topOffset ?? DEFAULT_TOP_OFFSET;
 
-  // Calculate available area after reservations
-  let areaX = 0;
-  let areaY = topOffset;
+  // Calculate available area after reservations, offset by display origin
+  let areaX = originX;
+  let areaY = originY + topOffset;
   let areaW = screenW;
   let areaH = screenH - topOffset;
 
@@ -155,6 +161,8 @@ export function createGrid(
     gap?: number;
     screenWidth?: number;
     screenHeight?: number;
+    screenX?: number;
+    screenY?: number;
     topOffset?: number;
     reserve?: GridConfig["reserve"];
   } = {}
@@ -174,6 +182,8 @@ export function createGrid(
     ...(options.gap !== undefined && { gap: options.gap }),
     ...(options.screenWidth !== undefined && { screenWidth: options.screenWidth }),
     ...(options.screenHeight !== undefined && { screenHeight: options.screenHeight }),
+    ...(options.screenX !== undefined && { screenX: options.screenX }),
+    ...(options.screenY !== undefined && { screenY: options.screenY }),
     ...(options.topOffset !== undefined && { topOffset: options.topOffset }),
     ...(options.reserve !== undefined && { reserve: options.reserve }),
   };

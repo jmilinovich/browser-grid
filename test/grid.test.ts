@@ -188,6 +188,64 @@ test.describe("createGrid", () => {
   });
 });
 
+test.describe("multi-monitor offset", () => {
+  test("should offset all slots by screenX/screenY", () => {
+    // Simulate tiling on a secondary display at (-2560, -323)
+    const slot = getSlot(0, {
+      cols: 2,
+      rows: 2,
+      screenWidth: 2560,
+      screenHeight: 1440,
+      screenX: -2560,
+      screenY: -323,
+    });
+    expect(slot.position.x).toBe(-2560);
+    // y = screenY + topOffset = -323 + 25 = -298
+    expect(slot.position.y).toBe(-298);
+    expect(slot.bounds.left).toBe(-2560);
+    expect(slot.bounds.top).toBe(-298);
+  });
+
+  test("should correctly position slot 1 on offset display", () => {
+    const slot = getSlot(1, {
+      cols: 2,
+      rows: 1,
+      screenWidth: 2560,
+      screenHeight: 1440,
+      screenX: -2560,
+      screenY: -323,
+    });
+    // Slot 1 = second column: x = -2560 + 1280 = -1280
+    expect(slot.position.x).toBe(-1280);
+    expect(slot.position.y).toBe(-298);
+  });
+
+  test("reserve should work with display offset", () => {
+    const slot = getSlot(0, {
+      cols: 2,
+      rows: 1,
+      screenWidth: 2560,
+      screenHeight: 1440,
+      screenX: -2560,
+      screenY: 0,
+      reserve: { side: "right", size: 560 },
+    });
+    // Available width: 2560 - 560 = 2000, each col = 1000
+    expect(slot.viewport.width).toBe(1000);
+    expect(slot.position.x).toBe(-2560);
+  });
+
+  test("createGrid should pass through screenX/screenY", () => {
+    const config = createGrid({
+      preset: "quad",
+      screenX: -2560,
+      screenY: -323,
+    });
+    expect(config.screenX).toBe(-2560);
+    expect(config.screenY).toBe(-323);
+  });
+});
+
 test.describe("playwrightLaunchArgs", () => {
   test("should return launch args array", () => {
     const args = playwrightLaunchArgs(0, { cols: 2, rows: 2 });

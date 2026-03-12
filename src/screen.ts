@@ -17,6 +17,29 @@ export interface DisplayInfo {
 }
 
 /**
+ * Full display bounds in screen coordinates (origin top-left of primary, y down).
+ * These coordinates are directly usable for CDP window positioning.
+ */
+export interface DisplayBounds {
+  name: string;
+  /** X origin in virtual screen space */
+  x: number;
+  /** Y origin in virtual screen space */
+  y: number;
+  /** Display width in logical pixels */
+  width: number;
+  /** Display height in logical pixels */
+  height: number;
+  /** Usable area (excluding menu bar, dock) */
+  visible: { x: number; y: number; width: number; height: number };
+  isMain: boolean;
+  isInternal: boolean;
+}
+
+/** Which display to tile on */
+export type DisplaySelector = "main" | "internal" | "laptop" | "secondary" | "external" | number | string;
+
+/**
  * Detect macOS screen resolution using system_profiler.
  * Returns logical resolution (points, not retina pixels) for the main display.
  * Falls back to sensible defaults if detection fails.
@@ -73,6 +96,114 @@ export function listDisplays(): DisplayInfo[] {
       isMain: true,
       isInternal: true,
     }];
+  }
+}
+
+/**
+ * List all displays with their positions in screen coordinates (top-left origin, y down).
+ * Uses NSScreen via osascript for accurate virtual-space positions.
+ * These coordinates map directly to CDP Browser.setWindowBounds.
+ */
+export function listScreens(): DisplayBounds[] {
+  try {
+    const script = `
+ObjC.import("AppKit");
+var screens = $.NSScreen.screens;
+var result = [];
+for (var i = 0; i < screens.count; i++) {
+  var s = screens.objectAtIndex(i);
+  var f = s.frame;
+  var v = s.visibleFrame;
+  var desc = s.deviceDescription;
+  var num = desc.objectForKey($("NSScreenNumber")).intValue;
+  result.push({
+    name: s.localizedName.js,
+    fx: f.origin.x, fy: f.origin.y, fw: f.size.width, fh: f.size.height,
+    vx: v.origin.x, vy: v.origin.y, vw: v.size.width, vh: v.size.height,
+    num: num
+  });
+}
+JSON.stringify(result);`;
+
+    const raw = execSync(`osascript -l JavaScript -e '${script.replace(/'/g, "'\\''")}'`, {
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim();
+
+    const nsScreens: Array<{
+      name: string;
+      fx: number; fy: number; fw: number; fh: number;
+      vx: number; vy: number; vw: number; vh: number;
+      num: number;
+    }> = JSON.parse(raw);
+
+    if (nsScreens.length === 0) return [];
+
+    // NSScreen[0] is always the main display. Its height is the reference for y-flip.
+    const primaryHeight = nsScreens[0].fh;
+
+    return nsScreens.map((ns, i) => {
+      // Convert from Cocoa coords (bottom-left origin, y up) to screen coords (top-left origin, y down)
+      const x = ns.fx;
+      const y = primaryHeight - ns.fy - ns.fh;
+      const visX = ns.vx;
+      const visY = primaryHeight - ns.vy - ns.vh;
+
+      // Heuristic: built-in displays have known names
+      const nameLower = ns.name.toLowerCase();
+      const isInternal = nameLower.includes("built-in") || nameLower.includes("internal") || nameLower.includes("color lcd");
+
+      return {
+        name: ns.name,
+        x,
+        y,
+        width: ns.fw,
+        height: ns.fh,
+        visible: { x: visX, y: visY, width: ns.vw, height: ns.vh },
+        isMain: i === 0,
+        isInternal,
+      };
+    });
+  } catch {
+    return [{
+      name: "Default",
+      x: 0,
+      y: 0,
+      width: DEFAULT_SCREEN.width,
+      height: DEFAULT_SCREEN.height,
+      visible: { x: 0, y: DEFAULT_TOP_OFFSET, width: DEFAULT_SCREEN.width, height: DEFAULT_SCREEN.height - DEFAULT_TOP_OFFSET },
+      isMain: true,
+      isInternal: true,
+    }];
+  }
+}
+
+/**
+ * Resolve a display selector to a specific DisplayBounds.
+ * Returns undefined if no match found.
+ */
+export function resolveDisplay(selector: DisplaySelector): DisplayBounds | undefined {
+  const screens = listScreens();
+  if (screens.length === 0) return undefined;
+
+  if (typeof selector === "number") {
+    return screens[selector];
+  }
+
+  switch (selector) {
+    case "main":
+      return screens.find(s => s.isMain) ?? screens[0];
+    case "internal":
+    case "laptop":
+      return screens.find(s => s.isInternal) ?? screens[0];
+    case "secondary":
+    case "external":
+      return screens.find(s => !s.isMain) ?? screens[0];
+    default:
+      // Name substring match (case-insensitive)
+      return screens.find(s =>
+        s.name.toLowerCase().includes(selector.toLowerCase())
+      );
   }
 }
 

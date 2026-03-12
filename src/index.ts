@@ -16,8 +16,8 @@ export { setWindowBounds, getWindowBounds } from "./cdp";
 export type { WindowBounds } from "./cdp";
 
 // Screen detection
-export { detectScreen, detectDock, listDisplays } from "./screen";
-export type { ScreenInfo, DisplayInfo } from "./screen";
+export { detectScreen, detectDock, listDisplays, listScreens, resolveDisplay } from "./screen";
+export type { ScreenInfo, DisplayInfo, DisplayBounds, DisplaySelector } from "./screen";
 
 // Overlay
 export { injectOverlay, updateOverlay, removeOverlay } from "./overlay";

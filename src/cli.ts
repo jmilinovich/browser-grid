@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { getSlot, createGrid, getAllSlots } from "./grid";
-import { detectScreen, listDisplays } from "./screen";
+import { detectScreen, listDisplays, listScreens } from "./screen";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -11,6 +11,7 @@ function printUsage() {
 
 Usage:
   browser-grid info                 Show detected screen and display info
+  browser-grid displays             Show all displays with positions (for multi-monitor)
   browser-grid slots [count]        Print slot positions for N workers (default: 4)
   browser-grid slots [count] --json Print as JSON
 
@@ -18,6 +19,7 @@ Options:
   --gap N              Gap between windows in pixels (default: 0)
   --reserve SIDE SIZE  Reserve screen region (e.g., --reserve right 700)
   --preset NAME        Use preset: duo, quad, six, eight, nine, auto (default: auto)
+  --display SELECTOR   Target display: main, internal/laptop, secondary/external, or name
 `);
 }
 
@@ -49,6 +51,31 @@ if (command === "info") {
       d.retina ? "retina" : "",
     ].filter(Boolean).join(", ");
     console.log(`  ${d.name}: ${d.width}×${d.height} (${tags})`);
+  }
+  process.exit(0);
+}
+
+if (command === "displays") {
+  const screens = listScreens();
+  const json = hasFlag("--json");
+
+  if (json) {
+    console.log(JSON.stringify(screens, null, 2));
+  } else {
+    console.log(`Displays (${screens.length}):\n`);
+    for (let i = 0; i < screens.length; i++) {
+      const s = screens[i];
+      const tags = [
+        s.isMain ? "main" : "",
+        s.isInternal ? "internal" : "external",
+      ].filter(Boolean).join(", ");
+      console.log(`  [${i}] ${s.name} (${tags})`);
+      console.log(`      Position: (${s.x}, ${s.y})  Size: ${s.width}×${s.height}`);
+      console.log(`      Usable:   (${s.visible.x}, ${s.visible.y})  ${s.visible.width}×${s.visible.height}`);
+      console.log();
+    }
+    console.log(`Use in config:  gridConfig({ display: "internal" })`);
+    console.log(`Or by name:     gridConfig({ display: "HP Z27" })`);
   }
   process.exit(0);
 }

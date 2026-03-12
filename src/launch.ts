@@ -2,7 +2,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "@playwri
 import { getSlot, createGrid, type GridConfig } from "./grid";
 import { setWindowBounds } from "./cdp";
 import { injectOverlay, updateOverlay, type OverlayOptions, type OverlayStatus } from "./overlay";
-import { detectScreen, detectDock } from "./screen";
+import { detectScreen, detectDock, resolveDisplay, type DisplaySelector } from "./screen";
 import { APP_MODE_FLAGS, MINIMAL_CHROME_FLAGS } from "./chrome-flags";
 
 export interface LaunchGridOptions {
@@ -24,6 +24,8 @@ export interface LaunchGridOptions {
   extraArgs?: string[];
   /** Delay between launches in ms (default: 200) */
   launchDelay?: number;
+  /** Which display to tile on: "main", "internal"/"laptop", "secondary"/"external", index, or name substring */
+  display?: DisplaySelector;
 }
 
 export interface GridSlot {
@@ -76,7 +78,33 @@ export async function launchGrid(options: LaunchGridOptions): Promise<GridInstan
     launchDelay = 200,
   } = options;
 
-  const screen = detectScreen();
+  // Resolve display: explicit selector > detect main
+  let screenX = 0;
+  let screenY = 0;
+  let screenW: number;
+  let screenH: number;
+  let topOffset: number;
+
+  if (options.display !== undefined) {
+    const display = resolveDisplay(options.display);
+    if (display) {
+      screenX = display.x;
+      screenY = display.y;
+      screenW = display.width;
+      screenH = display.height;
+      topOffset = display.visible.y - display.y;
+    } else {
+      const screen = detectScreen();
+      screenW = screen.width;
+      screenH = screen.height;
+      topOffset = screen.topOffset;
+    }
+  } else {
+    const screen = detectScreen();
+    screenW = screen.width;
+    screenH = screen.height;
+    topOffset = screen.topOffset;
+  }
 
   // Auto-detect dock unless user provided their own reserve
   let reserve = options.reserve;
@@ -89,9 +117,11 @@ export async function launchGrid(options: LaunchGridOptions): Promise<GridInstan
     preset: options.preset ?? "auto",
     workerCount: count,
     gap,
-    screenWidth: screen.width,
-    screenHeight: screen.height,
-    topOffset: screen.topOffset,
+    screenWidth: screenW,
+    screenHeight: screenH,
+    screenX,
+    screenY,
+    topOffset,
     reserve,
   });
 

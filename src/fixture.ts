@@ -2,7 +2,7 @@ import { test as base, type Page } from "@playwright/test";
 import { getSlot, createGrid, type GridConfig } from "./grid";
 import { setWindowBounds } from "./cdp";
 import { injectOverlay, updateOverlay, type OverlayOptions, type OverlayStatus } from "./overlay";
-import { detectScreen, detectDock } from "./screen";
+import { detectScreen, detectDock, resolveDisplay, type DisplaySelector } from "./screen";
 import { MINIMAL_CHROME_FLAGS, APP_MODE_FLAGS } from "./chrome-flags";
 
 /**
@@ -28,29 +28,55 @@ export interface GridFixtureOptions {
   screenWidth?: number;
   /** Screen height override (default: auto-detect) */
   screenHeight?: number;
+  /** Screen X origin override for multi-monitor (default: auto-detect) */
+  screenX?: number;
+  /** Screen Y origin override for multi-monitor (default: auto-detect) */
+  screenY?: number;
   /** Menu bar / top offset override (default: auto-detect) */
   topOffset?: number;
   /** Use chromeless app-mode windows — no tab bar, no URL bar (default: true) */
   appMode?: boolean;
   /** Auto-detect dock and avoid it (default: true). Set false if you handle it with reserve. */
   avoidDock?: boolean;
+  /** Which display to tile on: "main", "internal"/"laptop", "secondary"/"external", index, or name substring */
+  display?: DisplaySelector;
 }
 
 // Cache screen detection so we only run it once
-let cachedScreen: { width: number; height: number; topOffset: number } | null = null;
+let cachedScreen: { x: number; y: number; width: number; height: number; topOffset: number } | null = null;
 
 function getScreen(options: GridFixtureOptions) {
   if (options.screenWidth && options.screenHeight) {
     return {
+      x: options.screenX ?? 0,
+      y: options.screenY ?? 0,
       width: options.screenWidth,
       height: options.screenHeight,
       topOffset: options.topOffset ?? 25,
     };
   }
+
+  // If display selector is set, resolve to a specific display
+  if (options.display !== undefined) {
+    const display = resolveDisplay(options.display);
+    if (display) {
+      return {
+        x: display.x,
+        y: display.y,
+        width: display.width,
+        height: display.height,
+        topOffset: display.visible.y - display.y, // menu bar height for this display
+      };
+    }
+  }
+
   if (!cachedScreen) {
-    cachedScreen = detectScreen();
+    const detected = detectScreen();
+    cachedScreen = { x: 0, y: 0, ...detected };
   }
   return {
+    x: cachedScreen.x,
+    y: cachedScreen.y,
     width: options.screenWidth ?? cachedScreen.width,
     height: options.screenHeight ?? cachedScreen.height,
     topOffset: options.topOffset ?? cachedScreen.topOffset,
@@ -141,6 +167,8 @@ export const gridTest = base.extend<{ gridPage: Page }>({
       gap: options.gap,
       screenWidth: screen.width,
       screenHeight: screen.height,
+      screenX: screen.x,
+      screenY: screen.y,
       topOffset: screen.topOffset,
       reserve,
     });

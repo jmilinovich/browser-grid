@@ -1,8 +1,11 @@
 import { chromium } from "playwright";
+import { mkdtempSync, rmSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 import { getSlot, createGrid, type GridConfig } from "./src/grid";
 import { setWindowBounds } from "./src/cdp";
 import { injectOverlay } from "./src/overlay";
-import { detectScreen } from "./src/screen";
+import { detectScreen, resolveDisplay, type DisplaySelector } from "./src/screen";
 import { APP_MODE_FLAGS } from "./src/chrome-flags";
 
 /**
@@ -12,27 +15,75 @@ import { APP_MODE_FLAGS } from "./src/chrome-flags";
  *   npx tsx demo.ts              # 2x2 grid (4 browsers)
  *   npx tsx demo.ts 8            # 4x2 grid (8 browsers)
  *   npx tsx demo.ts 4 right 700  # 2x2 grid, reserve 700px on the right
+ *   npx tsx demo.ts 4 --display internal  # target built-in display
  */
 
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function main() {
-  const count = parseInt(process.argv[2] || "4", 10);
-  const reserveSide = process.argv[3] as "left" | "right" | undefined;
-  const reserveSize = parseInt(process.argv[4] || "0", 10);
+function parseArgs() {
+  const args = process.argv.slice(2);
+  let count = 4;
+  let reserveSide: "left" | "right" | undefined;
+  let reserveSize = 0;
+  let display: DisplaySelector | undefined;
 
-  const screen = detectScreen();
-  console.log(`Screen: ${screen.width}×${screen.height} (top offset: ${screen.topOffset})`);
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--display" && args[i + 1]) {
+      display = args[++i];
+    } else if (!reserveSide && /^\d+$/.test(args[i])) {
+      count = parseInt(args[i], 10);
+    } else if (!reserveSide && ["left", "right"].includes(args[i])) {
+      reserveSide = args[i] as "left" | "right";
+      if (args[i + 1] && /^\d+$/.test(args[i + 1])) {
+        reserveSize = parseInt(args[++i], 10);
+      }
+    }
+  }
+
+  return { count, reserveSide, reserveSize, display };
+}
+
+async function main() {
+  const { count, reserveSide, reserveSize, display } = parseArgs();
+
+  // Resolve screen from display selector or auto-detect
+  let screenX = 0, screenY = 0, screenW: number, screenH: number, topOffset: number;
+
+  if (display !== undefined) {
+    const resolved = resolveDisplay(display);
+    if (resolved) {
+      screenX = resolved.x;
+      screenY = resolved.y;
+      screenW = resolved.width;
+      screenH = resolved.height;
+      topOffset = resolved.visible.y - resolved.y;
+      console.log(`Display: ${resolved.name} (${screenW}×${screenH} at ${screenX},${screenY}, menu bar: ${topOffset}px)`);
+    } else {
+      console.error(`Display "${display}" not found, using main`);
+      const screen = detectScreen();
+      screenW = screen.width;
+      screenH = screen.height;
+      topOffset = screen.topOffset;
+    }
+  } else {
+    const screen = detectScreen();
+    screenW = screen.width;
+    screenH = screen.height;
+    topOffset = screen.topOffset;
+    console.log(`Screen: ${screenW}×${screenH} (top offset: ${topOffset})`);
+  }
 
   const config: GridConfig = createGrid({
     preset: "auto",
     workerCount: count,
     gap: 4,
-    screenWidth: screen.width,
-    screenHeight: screen.height,
-    topOffset: screen.topOffset,
+    screenWidth: screenW,
+    screenHeight: screenH,
+    screenX,
+    screenY,
+    topOffset,
     ...(reserveSide && reserveSize > 0 && {
       reserve: { side: reserveSide, size: reserveSize },
     }),
@@ -47,35 +98,39 @@ async function main() {
     "Signup", "Checkout", "Admin panel", "API health",
   ];
 
-  const browsers: Array<{ browser: any; page: any; slot: any }> = [];
+  const browsers: Array<{ context: any; page: any; slot: any }> = [];
+  const tempDirs: string[] = [];
 
   // Launch sequentially with a small delay so windows don't race/swallow each other
   for (let i = 0; i < count; i++) {
     const slot = getSlot(i, config);
-    const browser = await chromium.launch({
+
+    // Use launchPersistentContext so --app flag actually applies to our page
+    const tempDir = mkdtempSync(join(tmpdir(), "browser-grid-demo-"));
+    tempDirs.push(tempDir);
+
+    const context = await chromium.launchPersistentContext(tempDir, {
       headless: false,
+      viewport: slot.viewport,
       args: [
         ...slot.launchArgs,
         ...APP_MODE_FLAGS,
       ],
     });
-
-    const context = await browser.newContext({
-      viewport: slot.viewport,
-    });
-    const page = await context.newPage();
+    const page = context.pages()[0] || await context.newPage();
 
     // Precise positioning via CDP
     const cdpOk = await setWindowBounds(page, slot.bounds);
 
-    // Load a colored page
+    // Load a colored page with a proper title (shown in app-mode title bar)
     await page.setContent(`
+      <html><head><title>${testNames[i % testNames.length]}</title></head>
       <body style="margin:0; background:${colors[i % colors.length]}; display:flex; align-items:center; justify-content:center; height:100vh; font-family:system-ui;">
         <div style="text-align:center; color:white;">
           <div style="font-size:48px; font-weight:bold;">Slot ${i}</div>
           <div style="font-size:16px; opacity:0.8;">${slot.viewport.width}×${slot.viewport.height}</div>
         </div>
-      </body>
+      </body></html>
     `);
 
     // Inject overlay label
@@ -84,7 +139,7 @@ async function main() {
       testName: testNames[i % testNames.length],
     });
 
-    browsers.push({ browser, page, slot });
+    browsers.push({ context, page, slot });
     console.log(`  Slot ${i}: ${testNames[i % testNames.length]} (${slot.viewport.width}×${slot.viewport.height})`);
 
     // Small delay between launches

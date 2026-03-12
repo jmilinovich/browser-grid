@@ -1,4 +1,7 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { mkdtempSync, rmSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 import { getSlot, createGrid, type GridConfig } from "./grid";
 import { setWindowBounds } from "./cdp";
 import { injectOverlay, updateOverlay, type OverlayOptions, type OverlayStatus } from "./overlay";
@@ -127,18 +130,37 @@ export async function launchGrid(options: LaunchGridOptions): Promise<GridInstan
 
   const chromeFlags = appMode ? APP_MODE_FLAGS : MINIMAL_CHROME_FLAGS;
   const slots: GridSlot[] = [];
+  const tempDirs: string[] = [];
 
   for (let i = 0; i < count; i++) {
     const slotInfo = getSlot(i, config);
     const label = labels?.[i] ?? `Slot ${i}`;
 
-    const browser = await chromium.launch({
-      headless: false,
-      args: [...slotInfo.launchArgs, ...chromeFlags, ...extraArgs],
-    });
+    let browser: Browser;
+    let context: BrowserContext;
+    let page: Page;
 
-    const context = await browser.newContext({ viewport: slotInfo.viewport });
-    const page = await context.newPage();
+    if (appMode) {
+      // Use launchPersistentContext so the --app flag applies to the page we control
+      // (chromium.launch + newContext creates a separate non-app window)
+      const tempDir = mkdtempSync(join(tmpdir(), "browser-grid-"));
+      tempDirs.push(tempDir);
+
+      context = await chromium.launchPersistentContext(tempDir, {
+        headless: false,
+        viewport: slotInfo.viewport,
+        args: [...slotInfo.launchArgs, ...chromeFlags, ...extraArgs],
+      });
+      browser = context.browser()!;
+      page = context.pages()[0] || await context.newPage();
+    } else {
+      browser = await chromium.launch({
+        headless: false,
+        args: [...slotInfo.launchArgs, ...chromeFlags, ...extraArgs],
+      });
+      context = await browser.newContext({ viewport: slotInfo.viewport });
+      page = await context.newPage();
+    }
 
     await setWindowBounds(page, slotInfo.bounds);
 
@@ -186,7 +208,16 @@ export async function launchGrid(options: LaunchGridOptions): Promise<GridInstan
     get: (index: number) => slots[index],
     closeAll: async () => {
       for (const s of slots) {
-        await s.browser.close().catch(() => {});
+        try {
+          if (s.browser) await s.browser.close().catch(() => {});
+          else await s.context.close().catch(() => {});
+        } catch {
+          // Already closed
+        }
+      }
+      // Clean up temp directories
+      for (const dir of tempDirs) {
+        try { rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
       }
     },
   };

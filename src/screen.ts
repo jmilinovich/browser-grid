@@ -40,11 +40,26 @@ export interface DisplayBounds {
 export type DisplaySelector = "main" | "internal" | "laptop" | "secondary" | "external" | number | string;
 
 /**
- * Detect macOS screen resolution using system_profiler.
- * Returns logical resolution (points, not retina pixels) for the main display.
- * Falls back to sensible defaults if detection fails.
+ * Detect macOS screen resolution for the main display.
+ * Uses NSScreen (via listScreens) for accurate menu bar offset,
+ * falling back to system_profiler and then sensible defaults.
  */
 export function detectScreen(): ScreenInfo {
+  try {
+    // Prefer NSScreen data — it gives us the real visible area (correct menu bar height)
+    const screens = listScreens();
+    const main = screens.find(s => s.isMain) ?? screens[0];
+    if (main) {
+      return {
+        width: main.width,
+        height: main.height,
+        topOffset: main.visible.y - main.y,
+      };
+    }
+  } catch {
+    // Fall through to system_profiler
+  }
+
   try {
     return detectMacOSScreen();
   } catch {

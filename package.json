@@ -4,6 +4,9 @@
   "description": "Tile Playwright browser windows in a grid layout for parallel test visibility",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "browser-grid": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

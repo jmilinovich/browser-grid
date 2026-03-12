@@ -14,3 +14,16 @@ export const MINIMAL_CHROME_FLAGS = [
   "--ash-no-nudges",
   "--disable-features=TranslateUI,PasswordManagerOnboarding",
 ];
+
+/**
+ * Chrome flags for fully chromeless "app" mode windows.
+ * No tab bar, no URL bar, no bookmarks — just the page content
+ * with a thin title bar.
+ *
+ * Note: --app requires a URL. Use --app=about:blank as a starting point,
+ * then navigate with page.goto().
+ */
+export const APP_MODE_FLAGS = [
+  "--app=data:text/html,<html></html>",
+  ...MINIMAL_CHROME_FLAGS,
+];

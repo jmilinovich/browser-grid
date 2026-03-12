@@ -3,29 +3,16 @@ import { getSlot, createGrid, type GridConfig } from "./src/grid";
 import { setWindowBounds } from "./src/cdp";
 import { injectOverlay } from "./src/overlay";
 import { detectScreen } from "./src/screen";
+import { APP_MODE_FLAGS } from "./src/chrome-flags";
 
 /**
- * Demo: opens browsers in a grid, showcasing CDP positioning + overlays.
+ * Demo: opens browsers in a grid with chromeless app-mode windows.
  *
  * Usage:
  *   npx tsx demo.ts              # 2x2 grid (4 browsers)
  *   npx tsx demo.ts 8            # 4x2 grid (8 browsers)
  *   npx tsx demo.ts 4 right 700  # 2x2 grid, reserve 700px on the right
  */
-
-/** Chrome flags to strip browser UI down to just the viewport */
-const MINIMAL_CHROME_FLAGS = [
-  "--disable-infobars",
-  "--hide-scrollbars",
-  "--disable-bookmarks-bar",      // no bookmarks bar
-  "--no-first-run",               // no welcome page
-  "--no-default-browser-check",
-  "--disable-extensions",         // no extensions
-  "--disable-component-update",
-  "--disable-sync",               // no profile sync UI
-  "--ash-no-nudges",
-  "--disable-features=TranslateUI,PasswordManagerOnboarding",
-];
 
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -69,11 +56,10 @@ async function main() {
       headless: false,
       args: [
         ...slot.launchArgs,
-        ...MINIMAL_CHROME_FLAGS,
+        ...APP_MODE_FLAGS,
       ],
     });
 
-    // Use a fresh context with no state (no bookmarks, no saved data)
     const context = await browser.newContext({
       viewport: slot.viewport,
     });
@@ -86,9 +72,8 @@ async function main() {
     await page.setContent(`
       <body style="margin:0; background:${colors[i % colors.length]}; display:flex; align-items:center; justify-content:center; height:100vh; font-family:system-ui;">
         <div style="text-align:center; color:white;">
-          <div style="font-size:64px; font-weight:bold;">Slot ${i}</div>
-          <div style="font-size:18px; opacity:0.8;">${slot.viewport.width}×${slot.viewport.height}</div>
-          <div style="font-size:14px; opacity:0.5;">CDP: ${cdpOk ? "yes" : "fallback"}</div>
+          <div style="font-size:48px; font-weight:bold;">Slot ${i}</div>
+          <div style="font-size:16px; opacity:0.8;">${slot.viewport.width}×${slot.viewport.height}</div>
         </div>
       </body>
     `);
@@ -102,11 +87,11 @@ async function main() {
     browsers.push({ browser, page, slot });
     console.log(`  Slot ${i}: ${testNames[i % testNames.length]} (${slot.viewport.width}×${slot.viewport.height})`);
 
-    // Small delay between launches to let macOS window manager settle
-    if (i < count - 1) await sleep(300);
+    // Small delay between launches
+    if (i < count - 1) await sleep(200);
   }
 
-  // Re-position all windows once more after they've all settled
+  // Re-position all windows after they've all settled
   await sleep(500);
   for (const { page, slot } of browsers) {
     await setWindowBounds(page, slot.bounds);

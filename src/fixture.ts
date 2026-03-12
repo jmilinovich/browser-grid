@@ -3,7 +3,7 @@ import { getSlot, createGrid, type GridConfig } from "./grid";
 import { setWindowBounds } from "./cdp";
 import { injectOverlay, type OverlayOptions } from "./overlay";
 import { detectScreen } from "./screen";
-import { MINIMAL_CHROME_FLAGS } from "./chrome-flags";
+import { MINIMAL_CHROME_FLAGS, APP_MODE_FLAGS } from "./chrome-flags";
 
 /**
  * Configuration options for the browser-grid fixture.
@@ -30,6 +30,8 @@ export interface GridFixtureOptions {
   screenHeight?: number;
   /** Menu bar / top offset override (default: auto-detect) */
   topOffset?: number;
+  /** Use chromeless app-mode windows — no tab bar, no URL bar (default: true) */
+  appMode?: boolean;
 }
 
 // Cache screen detection so we only run it once
@@ -69,11 +71,11 @@ function getScreen(options: GridFixtureOptions) {
 export function gridConfig(
   options: GridFixtureOptions = {}
 ): Record<string, unknown> {
+  const useAppMode = options.appMode !== false;
   return {
     _browserGrid: options,
-    // Launch with minimal Chrome UI (no bookmarks, extensions, etc.)
     launchOptions: {
-      args: MINIMAL_CHROME_FLAGS,
+      args: useAppMode ? APP_MODE_FLAGS : MINIMAL_CHROME_FLAGS,
     },
   };
 }

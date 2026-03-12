@@ -24,7 +24,7 @@ export { injectOverlay, updateOverlay, removeOverlay } from "./overlay";
 export type { OverlayOptions } from "./overlay";
 
 // Chrome flags
-export { MINIMAL_CHROME_FLAGS } from "./chrome-flags";
+export { MINIMAL_CHROME_FLAGS, APP_MODE_FLAGS } from "./chrome-flags";
 
 // Playwright Test fixture
 export { gridTest, gridConfig } from "./fixture";

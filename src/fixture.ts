@@ -104,8 +104,10 @@ export const gridTest = base.extend<{ gridPage: Page }>({
     const screen = getScreen(options);
 
     // Determine worker count for auto preset
+    // Priority: explicit option > Playwright config > env var > default
     const workerCount =
       options.workerCount ??
+      (testInfo.config as any).workers ??
       parseInt(process.env.TEST_WORKER_COUNT || "4", 10);
 
     // Build grid config

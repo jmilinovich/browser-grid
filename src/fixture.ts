@@ -70,15 +70,28 @@ function getScreen(options: GridFixtureOptions) {
  * });
  * ```
  */
+/**
+ * Returns the chrome flags that gridConfig would use.
+ * Useful for merging with your own launchOptions:
+ *
+ * ```ts
+ * launchOptions: {
+ *   args: [...gridLaunchArgs(), '--my-custom-flag'],
+ * }
+ * ```
+ */
+export function gridLaunchArgs(options: { appMode?: boolean } = {}): string[] {
+  return options.appMode !== false ? APP_MODE_FLAGS : MINIMAL_CHROME_FLAGS;
+}
+
 export function gridConfig(
   options: GridFixtureOptions = {}
 ): Record<string, unknown> {
-  const useAppMode = options.appMode !== false;
+  // Only store the grid options — do NOT set launchOptions here.
+  // Users should compose launchOptions themselves using gridLaunchArgs()
+  // to avoid clobbering their own args (e.g., --disable-blink-features).
   return {
     _browserGrid: options,
-    launchOptions: {
-      args: useAppMode ? APP_MODE_FLAGS : MINIMAL_CHROME_FLAGS,
-    },
   };
 }
 

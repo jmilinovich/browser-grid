@@ -22,6 +22,22 @@ No tool like this exists. Zalenium (archived) validated the concept for Selenium
 | 8 | **Tests pass**: Unit tests for grid math. Integration test that launches 4 browsers and verifies positions via CDP. | `npm test` green. |
 | 9 | **Reserve zones**: User can reserve screen regions (e.g., right 700px for terminal). Grid tiles in remaining space. | Configure `reserve: { side: "right", size: 700 }`, verify browsers don't overlap reserved zone. |
 | 10 | **npm publishable**: package.json, LICENSE, .npmignore, builds cleanly, no local path deps. | `npm publish --dry-run` succeeds. |
+| 11 | **Composable config — no clobbering**: `gridConfig()` must NOT set `launchOptions` or any key that would overwrite the consumer's own config. Use `gridLaunchArgs()` for chrome flags that users compose themselves. | Verify: spreading `...gridConfig()` after a custom `launchOptions: { args: [...] }` does NOT lose the user's args. |
+| 12 | **Downstream skill freshness**: When the API, exports, fixture behavior, or config shape changes, update the downstream consumer at `~/src/canva-ai-routing`. The files to sync are: `playwright.config.ts`, `tests/routes.spec.ts`, and `.claude/commands/route-test.md`. See the table below for what triggers what. | After any API change, check that `cd ~/src/canva-ai-routing && npx playwright test --headed --workers=4` still runs with browser-grid tiling 4 portrait windows. |
+| 13 | **Viewport must not be overridden**: The `gridPage` fixture must position/size the window but NEVER override the viewport set in `playwright.config.ts`. Downstream consumers set specific viewports (e.g., 389×798 mobile). The fixture controls the *window*, not the *viewport*. | Set `viewport: { width: 389, height: 798 }` in config, use `gridPage` — verify `page.viewportSize()` is still 389×798. |
+| 14 | **launchGrid() for script-based testing**: `launchGrid()` and `runParallelTests()` handle the full lifecycle (launch, position, overlay, status, cleanup) for non-fixture usage (agent scripts, custom runners). | `launchGrid({ count: 4 })` opens 4 tiled browsers, `grid.closeAll()` cleans up. No leaked processes. |
+
+### Downstream Consumer: canva-ai-routing
+
+`~/src/canva-ai-routing` uses browser-grid for Playwright route testing against Canva AI (20 routes, 4 parallel portrait mobile windows at 389×798).
+
+| Change in browser-grid | Update needed in canva-ai-routing |
+|---|---|
+| Renamed exports (gridTest, gridConfig, gridLaunchArgs) | `playwright.config.ts`, `tests/routes.spec.ts` |
+| Changed GridConfig shape / preset names | `playwright.config.ts` grid config |
+| Changed fixture behavior (viewport, window sizing) | Verify 389×798 viewport still works — fixture must NOT override viewport |
+| New features (overlay options, reserve, status colors, etc.) | Consider adopting in config, update `.claude/commands/route-test.md` |
+| Published new version to npm | Update `package.json` dep version (currently uses `file:../browser-grid`) |
 
 ### Improvement Loop
 
@@ -30,8 +46,9 @@ A Claude session working on this should:
 2. Pick the lowest-numbered criterion that isn't fully met
 3. Implement it
 4. Verify it (run tests, visual check, etc.)
-5. Commit
-6. Repeat
+5. If the change affects exports/config/fixture behavior, also update `~/src/canva-ai-routing` per the table above
+6. Commit
+7. Repeat
 
 ---
 

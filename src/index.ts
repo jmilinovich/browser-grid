@@ -35,5 +35,5 @@ export { runParallelTests } from "./runner";
 export type { TestDefinition, RunnerOptions, RunnerResult } from "./runner";
 
 // Playwright Test fixture
-export { gridTest, gridConfig } from "./fixture";
+export { gridTest, gridConfig, gridLaunchArgs } from "./fixture";
 export type { GridFixtureOptions } from "./fixture";

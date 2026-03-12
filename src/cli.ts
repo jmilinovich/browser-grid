@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { getSlot, createGrid, getAllSlots } from "./grid";
-import { detectScreen } from "./screen";
+import { detectScreen, listDisplays } from "./screen";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -10,7 +10,7 @@ function printUsage() {
   console.log(`browser-grid — tile Playwright browser windows in a grid
 
 Usage:
-  browser-grid info                 Show detected screen info
+  browser-grid info                 Show detected screen and display info
   browser-grid slots [count]        Print slot positions for N workers (default: 4)
   browser-grid slots [count] --json Print as JSON
 
@@ -37,8 +37,19 @@ if (!command || command === "--help" || command === "-h") {
 
 if (command === "info") {
   const screen = detectScreen();
-  console.log(`Screen: ${screen.width}×${screen.height}`);
-  console.log(`Top offset: ${screen.topOffset}px (menu bar)`);
+  console.log(`Main screen: ${screen.width}×${screen.height}`);
+  console.log(`Top offset: ${screen.topOffset}px (menu bar)\n`);
+
+  const displays = listDisplays();
+  console.log(`Displays (${displays.length}):`);
+  for (const d of displays) {
+    const tags = [
+      d.isMain ? "main" : "",
+      d.isInternal ? "internal" : "external",
+      d.retina ? "retina" : "",
+    ].filter(Boolean).join(", ");
+    console.log(`  ${d.name}: ${d.width}×${d.height} (${tags})`);
+  }
   process.exit(0);
 }
 

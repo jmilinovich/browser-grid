@@ -11,8 +11,9 @@ function run(args: string): string {
 test.describe("CLI", () => {
   test("info should display screen dimensions", () => {
     const output = run("info");
-    expect(output).toMatch(/Screen: \d+×\d+/);
+    expect(output).toMatch(/Main screen: \d+×\d+/);
     expect(output).toMatch(/Top offset: \d+px/);
+    expect(output).toMatch(/Displays \(\d+\)/);
   });
 
   test("slots should display slot positions", () => {

@@ -7,9 +7,18 @@ export interface ScreenInfo {
   topOffset: number;
 }
 
+export interface DisplayInfo {
+  name: string;
+  width: number;
+  height: number;
+  retina: boolean;
+  isMain: boolean;
+  isInternal: boolean;
+}
+
 /**
  * Detect macOS screen resolution using system_profiler.
- * Returns logical resolution (points, not retina pixels).
+ * Returns logical resolution (points, not retina pixels) for the main display.
  * Falls back to sensible defaults if detection fails.
  */
 export function detectScreen(): ScreenInfo {
@@ -24,8 +33,50 @@ export function detectScreen(): ScreenInfo {
   }
 }
 
+/**
+ * List all connected displays with their resolutions.
+ * Useful for multi-monitor setups where you want to tile on a specific display.
+ */
+export function listDisplays(): DisplayInfo[] {
+  try {
+    const profilerOutput = execSync(
+      "system_profiler SPDisplaysDataType -json",
+      { encoding: "utf-8", timeout: 5000 }
+    );
+    const data = JSON.parse(profilerOutput);
+    const displays: DisplayInfo[] = [];
+
+    for (const gpu of data?.SPDisplaysDataType || []) {
+      for (const display of gpu.spdisplays_ndrvs || []) {
+        const resStr = display._spdisplays_resolution || display.spdisplays_resolution || "";
+        const match = resStr.match(/(\d+)\s*x\s*(\d+)/);
+        if (match) {
+          displays.push({
+            name: display._name || "Unknown",
+            width: parseInt(match[1], 10),
+            height: parseInt(match[2], 10),
+            retina: (display.spdisplays_pixelresolution || "").toLowerCase().includes("retina"),
+            isMain: display.spdisplays_main === "spdisplays_yes",
+            isInternal: display.spdisplays_connection_type === "spdisplays_internal",
+          });
+        }
+      }
+    }
+
+    return displays;
+  } catch {
+    return [{
+      name: "Default",
+      width: DEFAULT_SCREEN.width,
+      height: DEFAULT_SCREEN.height,
+      retina: true,
+      isMain: true,
+      isInternal: true,
+    }];
+  }
+}
+
 function detectMacOSScreen(): ScreenInfo {
-  // Get display resolution from system_profiler
   const profilerOutput = execSync(
     "system_profiler SPDisplaysDataType -json",
     { encoding: "utf-8", timeout: 5000 }
@@ -38,14 +89,11 @@ function detectMacOSScreen(): ScreenInfo {
   let height = DEFAULT_SCREEN.height;
 
   if (displays && displays.length > 0) {
-    // Find the main/built-in display, or use the first one
     for (const gpu of displays) {
       const ndrvs = gpu.spdisplays_ndrvs;
       if (ndrvs && ndrvs.length > 0) {
         for (const display of ndrvs) {
-          // Look for the main display (spdisplays_main = "spdisplays_yes")
           const isMain = display.spdisplays_main === "spdisplays_yes";
-          // Parse resolution like "1728 x 1117" from _spdisplays_resolution
           const resStr =
             display._spdisplays_resolution || display.spdisplays_resolution || "";
           const match = resStr.match(/(\d+)\s*x\s*(\d+)/);
@@ -63,9 +111,7 @@ function detectMacOSScreen(): ScreenInfo {
     }
   }
 
-  // Detect menu bar + dock offset
   const topOffset = detectTopOffset();
-
   return { width, height, topOffset };
 }
 
@@ -73,14 +119,12 @@ function detectTopOffset(): number {
   let offset = DEFAULT_TOP_OFFSET; // menu bar
 
   try {
-    // Check dock position
     const dockOrientation = execSync(
       "defaults read com.apple.dock orientation 2>/dev/null || echo bottom",
       { encoding: "utf-8", timeout: 2000 }
     ).trim();
 
     if (dockOrientation === "top") {
-      // Dock at top adds to the top offset
       try {
         const tileSize = parseInt(
           execSync("defaults read com.apple.dock tilesize 2>/dev/null || echo 48", {
@@ -89,10 +133,9 @@ function detectTopOffset(): number {
           }).trim(),
           10
         );
-        // Dock height is roughly tilesize + some padding
         offset += tileSize + 20;
       } catch {
-        offset += 70; // default dock height
+        offset += 70;
       }
     }
   } catch {
@@ -104,7 +147,6 @@ function detectTopOffset(): number {
 
 /**
  * Get dock info for reserve zone calculation.
- * Returns the side the dock is on and its approximate size.
  */
 export function detectDock(): { side: "left" | "right" | "bottom" | "top"; size: number } | null {
   try {
@@ -121,17 +163,16 @@ export function detectDock(): { side: "left" | "right" | "bottom" | "top"; size:
       10
     );
 
-    // Check if dock is set to auto-hide
     const autohide = execSync(
       "defaults read com.apple.dock autohide 2>/dev/null || echo 0",
       { encoding: "utf-8", timeout: 2000 }
     ).trim();
 
     if (autohide === "1") {
-      return null; // Auto-hidden dock doesn't take space
+      return null;
     }
 
-    const size = tileSize + 20; // tile size + padding
+    const size = tileSize + 20;
     const side = orientation as "left" | "right" | "bottom" | "top";
     return { side: side === "top" ? "top" : side, size };
   } catch {

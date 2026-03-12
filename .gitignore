@@ -1,3 +1,39 @@
 node_modules/
 dist/
 *.tsbuildinfo
+
+# Secrets and credentials
+.env
+.env.*
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+credentials*
+secrets*
+*.secret
+*.secrets
+token.json
+tokens.json
+service-account*.json
+gcp-credentials*.json
+
+# IDE and OS
+.DS_Store
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Sensitive logs
+*.log
+npm-debug.log*

@@ -1,0 +1,10 @@
+src/
+test/
+demo.ts
+example-test-usage.ts
+PLAN.md
+playwright.config.ts
+tsconfig.json
+.git
+.github
+node_modules

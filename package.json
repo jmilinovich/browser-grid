@@ -4,14 +4,42 @@
   "description": "Tile Playwright browser windows in a grid layout for parallel test visibility",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
-    "demo": "npx tsx demo.ts"
+    "test": "npx playwright test --config playwright.config.ts",
+    "demo": "npx tsx demo.ts",
+    "prepublishOnly": "npm run build"
   },
-  "dependencies": {},
+  "keywords": [
+    "playwright",
+    "browser",
+    "grid",
+    "tiling",
+    "parallel",
+    "testing",
+    "visual",
+    "headful"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "@playwright/test": ">=1.40.0"
+  },
   "devDependencies": {
-    "typescript": "^5.4.0",
     "@playwright/test": "^1.42.0",
-    "tsx": "^4.7.0"
+    "@types/node": "^25.4.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
   }
 }

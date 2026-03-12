@@ -77,11 +77,17 @@ launchOptions: {
 # Show detected screen info
 browser-grid info
 
+# List all displays with positions (multi-monitor)
+browser-grid displays
+
 # Print slot positions for 8 workers
 browser-grid slots 8
 
-# With gap and reserve zone, output as JSON
-browser-grid slots 8 --gap 4 --reserve right 700 --json
+# Target a specific display, with gap and reserve zone
+browser-grid slots 8 --display external --gap 4 --reserve right 700
+
+# Output as JSON
+browser-grid slots 4 --json
 ```
 
 ## Presets
@@ -129,6 +135,7 @@ Returns configuration to spread into `use` in `playwright.config.ts`. Automatica
 | `screenWidth` | `number` | auto-detect | Override screen width |
 | `screenHeight` | `number` | auto-detect | Override screen height |
 | `topOffset` | `number` | auto-detect | Menu bar offset in pixels |
+| `display` | `DisplaySelector` | auto | Target display: `"main"`, `"internal"`, `"external"`, index, or name |
 
 ### Grid Math
 
@@ -236,6 +243,26 @@ await grid.closeAll();
 | `labels` | `string[]` | `['Slot 0', ...]` | Custom slot labels |
 | `extraArgs` | `string[]` | `[]` | Additional Chrome launch args |
 | `launchDelay` | `number` | `200` | ms between sequential launches |
+| `display` | `DisplaySelector` | auto | Target display for multi-monitor |
+
+### `runParallelTests(tests, options)` — test runner
+
+Run an array of test functions in parallel across a tiled grid. Reports pass/fail with timing.
+
+```ts
+import { runParallelTests } from 'browser-grid';
+
+const result = await runParallelTests([
+  { name: 'Homepage', run: async (page) => {
+    await page.goto('https://example.com');
+  }},
+  { name: 'Login', run: async (page) => {
+    await page.goto('https://example.com/login');
+  }},
+]);
+
+console.log(`${result.passed} passed, ${result.failed} failed`);
+```
 
 ### Low-level API
 
@@ -262,8 +289,8 @@ await setWindowBounds(page, slot.bounds);
 ## How It Works
 
 1. **Grid math** divides available screen space into cells based on cols/rows, accounting for gaps, menu bar offset, and reserved zones.
-2. **Screen detection** reads macOS `system_profiler` for logical resolution and dock position. Falls back to sensible defaults.
-3. **App-mode windows** use Chrome's `--app` flag to remove the tab bar and URL bar, maximizing the viewport area.
+2. **Screen detection** uses macOS NSScreen API for accurate display bounds, menu bar height, and multi-monitor positions. Falls back to sensible defaults.
+3. **App-mode windows** use Chrome's `--app` flag with `launchPersistentContext` to remove the tab bar and URL bar, maximizing the viewport area.
 4. **CDP positioning** uses `Browser.setWindowBounds` for pixel-precise window placement after launch. Launch args (`--window-position`, `--window-size`) provide initial positioning.
 5. **Slot overlay** injects a small label via `page.evaluate()` + `page.addInitScript()` so it persists across navigations.
 

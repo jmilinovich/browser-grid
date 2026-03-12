@@ -26,6 +26,10 @@ export type { OverlayOptions, OverlayStatus } from "./overlay";
 // Chrome flags
 export { MINIMAL_CHROME_FLAGS, APP_MODE_FLAGS } from "./chrome-flags";
 
+// High-level launcher
+export { launchGrid } from "./launch";
+export type { LaunchGridOptions, GridSlot, GridInstance } from "./launch";
+
 // Playwright Test fixture
 export { gridTest, gridConfig } from "./fixture";
 export type { GridFixtureOptions } from "./fixture";

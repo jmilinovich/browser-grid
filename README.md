@@ -186,9 +186,48 @@ Update the overlay text (e.g., when a new test starts in the same worker slot).
 
 Remove the overlay from a page.
 
-## Standalone Usage (without fixture)
+## Standalone Usage
 
-You can use the grid math, chrome flags, and CDP functions directly:
+### `launchGrid(options)` — the easy way
+
+Launch multiple browsers in a tiled grid with one call. Handles sequential launch, CDP positioning, overlays, and cleanup.
+
+```ts
+import { launchGrid } from 'browser-grid';
+
+const grid = await launchGrid({
+  count: 4,
+  labels: ['Homepage', 'Login', 'Dashboard', 'Settings'],
+  reserve: { side: 'right', size: 700 },
+});
+
+// Each slot has a page ready to use
+await grid.get(0).page.goto('https://example.com');
+await grid.get(1).page.goto('https://example.com/login');
+
+// Update status overlays as tests progress
+await grid.get(0).setStatus('passed', 'Homepage ✓');
+await grid.get(1).setStatus('failed', 'Login ✗');
+
+// Clean up
+await grid.closeAll();
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `count` | `number` | required | Number of browser windows |
+| `preset` | `string \| GridConfig` | `'auto'` | Grid layout |
+| `gap` | `number` | `4` | Pixels between windows |
+| `reserve` | `{ side, size }` | none | Reserve screen region |
+| `appMode` | `boolean` | `true` | Chromeless windows |
+| `overlay` | `boolean` | `true` | Show slot labels |
+| `labels` | `string[]` | `['Slot 0', ...]` | Custom slot labels |
+| `extraArgs` | `string[]` | `[]` | Additional Chrome launch args |
+| `launchDelay` | `number` | `200` | ms between sequential launches |
+
+### Low-level API
+
+You can also use the grid math, chrome flags, and CDP functions directly:
 
 ```ts
 import { chromium } from 'playwright';

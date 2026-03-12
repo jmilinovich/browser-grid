@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Multi-monitor display targeting** — `display` option in `gridConfig()` and `launchGrid()` to tile on a specific monitor: `"main"`, `"internal"`/`"laptop"`, `"secondary"`/`"external"`, index, or name substring (e.g., `"HP Z27"`)
+- `listScreens()` — returns all displays with positions in CDP-compatible screen coordinates
+- `resolveDisplay()` — resolve a display selector to full display bounds
+- `DisplayBounds` and `DisplaySelector` types
+- CLI `browser-grid displays` command — show all monitors with positions and usable areas
+- `/wrap-up` skill — end-of-session checklist for commits, docs, downstream sync
+- Workflow rules in CLAUDE.md for deterministic autonomous sessions
+
+### Changed
+- `GridConfig` gains `screenX`/`screenY` for display origin offset
+- `createGrid()` accepts `screenX`/`screenY` options
+- Grid math offsets all slot positions by display origin (enables tiling on non-primary monitors)
+
 ## 0.2.0
 
 ### Added

@@ -2,7 +2,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "@playwri
 import { getSlot, createGrid, type GridConfig } from "./grid";
 import { setWindowBounds } from "./cdp";
 import { injectOverlay, updateOverlay, type OverlayOptions, type OverlayStatus } from "./overlay";
-import { detectScreen } from "./screen";
+import { detectScreen, detectDock } from "./screen";
 import { APP_MODE_FLAGS, MINIMAL_CHROME_FLAGS } from "./chrome-flags";
 
 export interface LaunchGridOptions {
@@ -77,6 +77,14 @@ export async function launchGrid(options: LaunchGridOptions): Promise<GridInstan
   } = options;
 
   const screen = detectScreen();
+
+  // Auto-detect dock unless user provided their own reserve
+  let reserve = options.reserve;
+  if (!reserve) {
+    const dock = detectDock();
+    if (dock) reserve = dock;
+  }
+
   const config: GridConfig = createGrid({
     preset: options.preset ?? "auto",
     workerCount: count,
@@ -84,7 +92,7 @@ export async function launchGrid(options: LaunchGridOptions): Promise<GridInstan
     screenWidth: screen.width,
     screenHeight: screen.height,
     topOffset: screen.topOffset,
-    reserve: options.reserve,
+    reserve,
   });
 
   const chromeFlags = appMode ? APP_MODE_FLAGS : MINIMAL_CHROME_FLAGS;

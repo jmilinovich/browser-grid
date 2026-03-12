@@ -2,7 +2,7 @@ import { test as base, type Page } from "@playwright/test";
 import { getSlot, createGrid, type GridConfig } from "./grid";
 import { setWindowBounds } from "./cdp";
 import { injectOverlay, updateOverlay, type OverlayOptions, type OverlayStatus } from "./overlay";
-import { detectScreen } from "./screen";
+import { detectScreen, detectDock } from "./screen";
 import { MINIMAL_CHROME_FLAGS, APP_MODE_FLAGS } from "./chrome-flags";
 
 /**
@@ -32,6 +32,8 @@ export interface GridFixtureOptions {
   topOffset?: number;
   /** Use chromeless app-mode windows — no tab bar, no URL bar (default: true) */
   appMode?: boolean;
+  /** Auto-detect dock and avoid it (default: true). Set false if you handle it with reserve. */
+  avoidDock?: boolean;
 }
 
 // Cache screen detection so we only run it once
@@ -110,6 +112,15 @@ export const gridTest = base.extend<{ gridPage: Page }>({
       (testInfo.config as any).workers ??
       parseInt(process.env.TEST_WORKER_COUNT || "4", 10);
 
+    // Auto-detect dock unless user provided their own reserve
+    let reserve = options.reserve;
+    if (!reserve && options.avoidDock !== false) {
+      const dock = detectDock();
+      if (dock) {
+        reserve = dock;
+      }
+    }
+
     // Build grid config
     const gridCfg = createGrid({
       preset: options.preset ?? "auto",
@@ -118,7 +129,7 @@ export const gridTest = base.extend<{ gridPage: Page }>({
       screenWidth: screen.width,
       screenHeight: screen.height,
       topOffset: screen.topOffset,
-      reserve: options.reserve,
+      reserve,
     });
 
     // Get slot for this worker
